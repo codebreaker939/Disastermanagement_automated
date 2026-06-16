@@ -2,33 +2,35 @@ services:
 
   mysql:
     image: mysql:8
-
     container_name: disasteralert-mysql
-
     restart: always
-
     environment:
       MYSQL_ROOT_PASSWORD: root123
       MYSQL_DATABASE: disasteralert
-
     ports:
       - "3307:3306"
-
     volumes:
       - mysql_data:/var/lib/mysql
 
   app:
     build: .
-
     container_name: disasteralert-app
-
     restart: always
-
     depends_on:
       - mysql
-
     ports:
       - "8000:8000"
+
+  nginx:
+    image: nginx:latest
+    container_name: disasteralert-nginx
+    restart: always
+    depends_on:
+      - app
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
 
 volumes:
   mysql_data:
