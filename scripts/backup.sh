@@ -2,11 +2,8 @@
 
 DATE=$(date +%Y-%m-%d)
 
-mysqldump \
--u root \
--proot123 \
--h localhost \
-disasteralert \
-> backup_$DATE.sql
+docker exec disasteralert-mysql \
+mysqldump -u root -proot123 disasteralert \
+> backups/backup_$DATE.sql
 
 echo "Backup Completed"
