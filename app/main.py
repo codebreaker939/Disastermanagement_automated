@@ -2,13 +2,14 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 
 from database import SessionLocal, engine
-from models import Base, Incident , EmergencyTeam , Resource , User
+from models import Base, Incident, EmergencyTeam, Resource, User
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="DisasterAlert Cloud")
+app = FastAPI(title="DisasterAlert Emergency Response Cloud")
 
 
+# Database Session
 def get_db():
     db = SessionLocal()
     try:
@@ -17,6 +18,12 @@ def get_db():
         db.close()
 
 
+# Role Validation
+def check_role(role, allowed_roles):
+    return role in allowed_roles
+
+
+# Home API
 @app.get("/")
 def home():
     return {
@@ -24,13 +31,38 @@ def home():
     }
 
 
+# Create User
+@app.post("/user")
+def create_user(
+    username: str,
+    role: str,
+    db: Session = Depends(get_db)
+):
+    user = User(
+        username=username,
+        role=role
+    )
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+# Create Incident (RBAC Enabled)
 @app.post("/incident")
 def create_incident(
     incident_type: str,
     location: str,
     status: str,
+    role: str,
     db: Session = Depends(get_db)
 ):
+
+    if not check_role(role, ["Admin", "Operator"]):
+        return {"error": "Access Denied"}
+
     incident = Incident(
         incident_type=incident_type,
         location=location,
@@ -44,17 +76,26 @@ def create_incident(
     return incident
 
 
+# Get Incidents
 @app.get("/incidents")
-def get_incidents(db: Session = Depends(get_db)):
+def get_incidents(
+    db: Session = Depends(get_db)
+):
     return db.query(Incident).all()
 
 
+# Update Incident
 @app.put("/incident/{incident_id}")
 def update_incident(
     incident_id: int,
     status: str,
+    role: str,
     db: Session = Depends(get_db)
 ):
+
+    if not check_role(role, ["Admin", "Manager"]):
+        return {"error": "Access Denied"}
+
     incident = db.query(Incident).filter(
         Incident.id == incident_id
     ).first()
@@ -66,14 +107,22 @@ def update_incident(
 
     db.commit()
 
-    return {"message": "Incident updated"}
+    return {
+        "message": "Incident updated"
+    }
 
 
+# Delete Incident
 @app.delete("/incident/{incident_id}")
 def delete_incident(
     incident_id: int,
+    role: str,
     db: Session = Depends(get_db)
 ):
+
+    if not check_role(role, ["Admin"]):
+        return {"error": "Access Denied"}
+
     incident = db.query(Incident).filter(
         Incident.id == incident_id
     ).first()
@@ -84,41 +133,99 @@ def delete_incident(
     db.delete(incident)
     db.commit()
 
-    return {"message": "Incident deleted"}
+    return {
+        "message": "Incident deleted"
+    }
 
+
+# Create Team
 @app.post("/team")
-def create_team(team_name: str, region: str, status: str, db: Session = Depends(get_db)):
-    team = EmergencyTeam(team_name=team_name, region=region, status=status)
+def create_team(
+    team_name: str,
+    region: str,
+    status: str,
+    db: Session = Depends(get_db)
+):
+    team = EmergencyTeam(
+        team_name=team_name,
+        region=region,
+        status=status
+    )
+
     db.add(team)
     db.commit()
     db.refresh(team)
+
     return team
 
 
+# Get Teams
 @app.get("/teams")
-def get_teams(db: Session = Depends(get_db)):
+def get_teams(
+    db: Session = Depends(get_db)
+):
     return db.query(EmergencyTeam).all()
 
 
+# Create Resource
 @app.post("/resource")
-def create_resource(resource_name: str, quantity: int, location: str, db: Session = Depends(get_db)):
-    resource = Resource(resource_name=resource_name, quantity=quantity, location=location)
+def create_resource(
+    resource_name: str,
+    quantity: int,
+    location: str,
+    db: Session = Depends(get_db)
+):
+    resource = Resource(
+        resource_name=resource_name,
+        quantity=quantity,
+        location=location
+    )
+
     db.add(resource)
     db.commit()
     db.refresh(resource)
+
     return resource
 
 
+# Get Resources
 @app.get("/resources")
-def get_resources(db: Session = Depends(get_db)):
+def get_resources(
+    db: Session = Depends(get_db)
+):
     return db.query(Resource).all()
 
 
+# Dashboard API
 @app.get("/dashboard")
-def dashboard(db: Session = Depends(get_db)):
+def dashboard(
+    db: Session = Depends(get_db)
+):
     return {
         "total_incidents": db.query(Incident).count(),
-        "active_incidents": db.query(Incident).filter(Incident.status == "Active").count(),
+        "active_incidents": db.query(Incident).filter(
+            Incident.status == "Active"
+        ).count(),
         "total_teams": db.query(EmergencyTeam).count(),
         "available_resources": db.query(Resource).count()
+    }
+
+
+# Executive Reports
+@app.get("/reports")
+def reports(
+    role: str,
+    db: Session = Depends(get_db)
+):
+
+    if not check_role(role, ["Admin", "Executive"]):
+        return {"error": "Access Denied"}
+
+    return {
+        "total_incidents": db.query(Incident).count(),
+        "total_teams": db.query(EmergencyTeam).count(),
+        "total_resources": db.query(Resource).count(),
+        "active_incidents": db.query(Incident).filter(
+            Incident.status == "Active"
+        ).count()
     }
