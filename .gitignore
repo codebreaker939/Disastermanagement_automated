@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+
+# Virtual Environment
+venv/
+.env/
+.env.*
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# MacOS
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Kubernetes
+*.kubeconfig
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Jenkins
+jenkins_home/
+
+# Docker
+*.tar
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+
+# Database
+*.db
+*.sqlite3
+
+# Monitoring
+prometheus_data/
+grafana_data/
+
+# Temporary Files
+tmp/
+temp/
+
+# Build Files
+dist/
+build/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Node Modules (if frontend later)
+node_modules/
+
+requirements.txt
